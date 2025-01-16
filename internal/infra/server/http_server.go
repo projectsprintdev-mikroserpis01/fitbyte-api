@@ -8,14 +8,22 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain"
+	authCtr "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/auth/controller"
+	authRepo "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/auth/repository"
+	authSvc "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/auth/service"
+	userCtr "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/user/controller"
+	userRepo "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/user/repository"
+	userSvc "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/user/service"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/infra/env"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/middlewares"
+	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/bcrypt"
 	errorhandler "github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/helpers/http/error_handler"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/helpers/http/response"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/jwt"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/log"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/s3"
 	timePkg "github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/time"
+	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/validator"
 )
 
 type HttpServer interface {
@@ -32,8 +40,8 @@ type httpServer struct {
 func NewHttpServer() HttpServer {
 	config := fiber.Config{
 		CaseSensitive: true,
-		AppName:       "GoGo Manager",
-		ServerHeader:  "GoGo Manager",
+		AppName:       "Fitbyte",
+		ServerHeader:  "Fitbyte",
 		JSONEncoder:   sonic.Marshal,
 		JSONDecoder:   sonic.Unmarshal,
 		ErrorHandler:  errorhandler.ErrorHandler,
@@ -76,26 +84,38 @@ func (s *httpServer) MountMiddlewares() {
 }
 
 func (s *httpServer) MountRoutes(db *sqlx.DB) {
-	//bcrypt := bcrypt.Bcrypt
+	bcrypt := bcrypt.Bcrypt
 	_ = timePkg.Time
-	//uuid := uuid.UUID
-	//validator := validator.Validator
-	jwtManager := jwt.JwtManager
+	// uuid := uuid.UUID
+	validator := validator.Validator
 	jwt := jwt.Jwt
 	s3 := s3.S3
 
-	middleware := middlewares.NewMiddleware(jwt, jwtManager)
+	middleware := middlewares.NewMiddleware(jwt)
 
 	s.app.Get("/", func(c *fiber.Ctx) error {
 		return response.SendResponse(c, fiber.StatusOK, "fitbyte API")
 	})
 
 	api := s.app.Group("/v1")
+
 	api.Get("/", func(c *fiber.Ctx) error {
 		return response.SendResponse(c, fiber.StatusOK, "fitbyte API")
 	})
 
-	s.app.Post("/v1/file", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
+	// Initialize repositories
+	userRepo := userRepo.NewUserRepository(db)
+	authRepository := authRepo.NewAuthRepository(db)
+
+	// Initialize services
+	userService := userSvc.NewUserService(userRepo, jwt, bcrypt, validator)
+	authService := authSvc.NewAuthService(authRepository, validator, jwt, bcrypt)
+
+	// Initialize controllers
+	userCtr.InitUserController(s.app, userService)
+	authCtr.InitAuthController(s.app, authService)
+
+	s.app.Post("/v1/file", middleware.RequireAuth(), func(c *fiber.Ctx) error {
 		file, err := c.FormFile("file")
 		if err != nil {
 			return domain.ErrFileNotFound
