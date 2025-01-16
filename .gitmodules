@@ -1,0 +1,3 @@
+[submodule "test/Batch3Project2TestCase"]
+	path = test/Batch3Project2TestCase
+	url = https://github.com/ProjectSprint/Batch3Project2TestCase.git
