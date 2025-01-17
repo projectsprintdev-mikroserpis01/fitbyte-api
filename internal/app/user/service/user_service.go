@@ -49,7 +49,7 @@ func (s *userService) GetUserById(ctx context.Context, id int) (*dto.GetCurrentU
 		return nil, err
 	}
 
-	ret := dto.GetCurrentUserResponse{Email: user.Email, Name: user.Name, UserImageUri: user.UserImageURI, CompanyName: user.CompanyName, CompanyImageUri: user.CompanyImageURI}
+	ret := dto.GetCurrentUserResponse{Email: user.Email, Name: user.Name, Preference: user.Preference, WeightUnit: user.WeightUnit, HeightUnit: user.HeightUnit, Weight: user.Weight, Height: user.Height, ImageURI: user.ImageURI}
 	return &ret, nil
 }
 

@@ -15,25 +15,35 @@ func InitAuthController(router fiber.Router, authService contracts.AuthService) 
 		authService: authService,
 	}
 
-	authGroup := router.Group("/v1/auth")
-	authGroup.Post("/", controller.handleAuth)
+	v1 := router.Group("/v1")
+	v1.Post("/login", controller.handleLogin)
+	v1.Post("/register", controller.handleRegister)
 }
 
-func (mc *authController) handleAuth(ctx *fiber.Ctx) error {
-	var req dto.AuthRequest
+func (mc *authController) handleLogin(ctx *fiber.Ctx) error {
+	var req dto.LoginRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	res, err := mc.authService.Authenticate(ctx.Context(), req)
+	res, err := mc.authService.Login(ctx.Context(), req)
 	if err != nil {
 		return err
 	}
+	return ctx.Status(fiber.StatusOK).JSON(res)
 
-	status := fiber.StatusOK
-	if req.Action == "create" {
-		status = fiber.StatusCreated
+}
+
+func (mc *authController) handleRegister(ctx *fiber.Ctx) error {
+	var req dto.RegisterRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
-	return ctx.Status(status).JSON(res)
+
+	res, err := mc.authService.Register(ctx.Context(), req)
+	if err != nil {
+		return err
+	}
+	return ctx.Status(fiber.StatusCreated).JSON(res)
 
 }

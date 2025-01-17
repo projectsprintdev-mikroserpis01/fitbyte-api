@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain"
@@ -34,61 +34,64 @@ func NewAuthService(
 	}
 }
 
-func (s *authService) Authenticate(ctx context.Context, req dto.AuthRequest) (dto.AuthResponse, error) {
+func (s *authService) Register(ctx context.Context, req dto.RegisterRequest) (dto.RegisterResponse, error) {
 	valErr := s.validator.Validate(req)
 	if valErr != nil {
-		return dto.AuthResponse{}, valErr
+		return dto.RegisterResponse{}, valErr
 	}
 
-	switch req.Action {
-	case "create":
-		exists, err := s.repo.EmailExists(ctx, req.Email)
-		if err != nil {
-			return dto.AuthResponse{}, err
-		}
-
-		if exists {
-			return dto.AuthResponse{}, fiber.NewError(fiber.StatusConflict, "email already exists")
-		}
-
-		hashedPassword, err := s.bcrypt.Hash(req.Password)
-		if err != nil {
-			return dto.AuthResponse{}, err
-		}
-
-		req.Password = hashedPassword
-		user, err := s.repo.CreateUser(ctx, req)
-		if err != nil {
-			return dto.AuthResponse{}, err
-		}
-
-		token, err := s.jwt.Create(user.ID, user.Email)
-		if err != nil {
-			return dto.AuthResponse{}, err
-		}
-
-		return dto.AuthResponse{Email: req.Email, Token: token}, nil
-
-	case "login":
-		user, err := s.repo.GetUserByEmail(ctx, req.Email)
-		if err != nil {
-			return dto.AuthResponse{}, fiber.NewError(fiber.StatusNotFound, "user not found")
-		}
-
-		isValid := s.bcrypt.Compare(req.Password, user.Password)
-		if !isValid {
-			return dto.AuthResponse{}, domain.ErrCredentialsNotMatch
-		}
-
-		token, err := s.jwt.Create(user.ID, req.Email)
-		if err != nil {
-			return dto.AuthResponse{}, err
-		}
-
-		return dto.AuthResponse{Email: req.Email, Token: token}, nil
-
-	default:
-		return dto.AuthResponse{}, errors.New("invalid action")
+	exists, err := s.repo.EmailExists(ctx, req.Email)
+	if err != nil {
+		return dto.RegisterResponse{}, err
 	}
+
+	if exists {
+		return dto.RegisterResponse{}, fiber.NewError(fiber.StatusConflict, "email already exists")
+	}
+
+	hashedPassword, err := s.bcrypt.Hash(req.Password)
+	if err != nil {
+		return dto.RegisterResponse{}, err
+	}
+
+	req.Password = hashedPassword
+	user, err := s.repo.CreateUser(ctx, req.Email, req.Password)
+	if err != nil {
+		fmt.Println("failed to CreateUser", err)
+
+		return dto.RegisterResponse{}, err
+	}
+
+	token, err := s.jwt.Create(user.ID, user.Email)
+	if err != nil {
+		return dto.RegisterResponse{}, err
+	}
+
+	return dto.RegisterResponse{Email: req.Email, Token: token}, nil
+
+}
+
+func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
+	valErr := s.validator.Validate(req)
+	if valErr != nil {
+		return dto.LoginResponse{}, valErr
+	}
+
+	user, err := s.repo.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		return dto.LoginResponse{}, fiber.NewError(fiber.StatusNotFound, "user not found")
+	}
+
+	isValid := s.bcrypt.Compare(req.Password, user.Password)
+	if !isValid {
+		return dto.LoginResponse{}, domain.ErrCredentialsNotMatch
+	}
+
+	token, err := s.jwt.Create(user.ID, req.Email)
+	if err != nil {
+		return dto.LoginResponse{}, err
+	}
+
+	return dto.LoginResponse{Email: req.Email, Token: token}, nil
 
 }

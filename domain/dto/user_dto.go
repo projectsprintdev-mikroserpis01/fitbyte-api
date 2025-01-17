@@ -4,11 +4,14 @@ type GetCurrentUserRequest struct {
 }
 
 type GetCurrentUserResponse struct {
-	Email           string `db:"email" json:"email"`
-	Name            string `db:"name" json:"name"`
-	UserImageUri    string `db:"user_image_uri" json:"userImageUri"`
-	CompanyName     string `db:"company_name" json:"companyName"`
-	CompanyImageUri string `db:"company_image_uri" json:"companyImageUri"`
+	Email      string `json:"email"`
+	Name       string `json:"name"`
+	Preference string `json:"preference"`
+	WeightUnit string `json:"weightUnit"`
+	HeightUnit string `json:"heightUnit"`
+	Weight     int    `json:"weight"`
+	Height     int    `json:"height"`
+	ImageURI   string `json:"imageUri"`
 }
 type UpdateUserRequest struct {
 	Email           *string `json:"email" validate:"email"`
