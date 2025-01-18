@@ -13,6 +13,19 @@ var ActivityTypes = map[int16]string{
 	10: "JumpRope",
 }
 
+var ActivityTypesReverse = map[string]int16{
+	"Walking":    1,
+	"Yoga":       2,
+	"Stretching": 3,
+	"Cycling":    4,
+	"Swimming":   5,
+	"Dancing":    6,
+	"Hiking":     7,
+	"Running":    8,
+	"HIIT":       9,
+	"JumpRope":   10,
+}
+
 var Calories = map[string]int{
 	"Walking":    4,
 	"Yoga":       4,
