@@ -86,12 +86,15 @@ func (s *httpServer) MountMiddlewares() {
 func (s *httpServer) MountRoutes(db *sqlx.DB) {
 	bcrypt := bcrypt.Bcrypt
 	_ = timePkg.Time
-	// uuid := uuid.UUID
 	validator := validator.Validator
 	jwt := jwt.Jwt
-	s3 := s3.S3
-
 	middleware := middlewares.NewMiddleware(jwt)
+	s3Client, err := s3.NewS3Client()
+	if err != nil {
+		log.Error(log.LogInfo{
+			"error": err.Error(),
+		}, "[Server] Failed to initialize S3 client")
+	}
 
 	s.app.Get("/", func(c *fiber.Ctx) error {
 		return response.SendResponse(c, fiber.StatusOK, "fitbyte API")
@@ -142,7 +145,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB) {
 			return domain.ErrFileSizeLimitExceeded
 		}
 
-		uri, err := s3.Upload(file)
+		uri, err := s3Client.Upload(file)
 		if err != nil {
 			return err
 		}

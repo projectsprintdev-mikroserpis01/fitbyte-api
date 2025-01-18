@@ -1,9 +1,12 @@
 package s3
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"net"
+	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,32 +17,75 @@ import (
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/log"
 )
 
+const (
+	maxFileSize    = 100 * 1024      // 100 KiB
+	uploadPartSize = 5 * 1024 * 1024 // 5MB (S3 minimum part size)
+)
+
 type S3Interface interface {
 	Upload(file *multipart.FileHeader) (string, error)
 }
 
 type S3Struct struct {
-	session  *session.Session
 	uploader *s3manager.Uploader
 }
 
-var S3 = getS3()
+func newHTTPClient() *http.Client {
+	return &http.Client{
+		Transport: &http.Transport{
+			WriteBufferSize:     64 * 1024,
+			ReadBufferSize:      64 * 1024,
+			MaxIdleConns:        200,
+			MaxIdleConnsPerHost: 200,
+			IdleConnTimeout:     90 * time.Second,
+			TLSHandshakeTimeout: 10 * time.Second,
+			DialContext: (&net.Dialer{
+				Timeout:   5 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+		},
+		Timeout: 45 * time.Second,
+	}
+}
 
-func getS3() S3Interface {
-	session := session.Must(session.NewSession(&aws.Config{
+func NewS3Client() (*S3Struct, error) {
+
+	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(env.AppEnv.AWSRegion),
 		Credentials: credentials.NewStaticCredentials(
 			env.AppEnv.AWSAccessKeyID,
 			env.AppEnv.AWSSecretAccessKey,
 			"",
 		),
-	}))
+		HTTPClient: newHTTPClient(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create AWS session: %w", err)
+	}
 
-	uploader := s3manager.NewUploader(session)
+	uploader := s3manager.NewUploader(sess, func(u *s3manager.Uploader) {
+		u.Concurrency = 2
+		u.PartSize = uploadPartSize
+		u.LeavePartsOnError = false
+		u.MaxUploadParts = 10000
+	})
 
 	return &S3Struct{
-		session:  session,
 		uploader: uploader,
+	}, nil
+}
+
+var (
+	S3  S3Interface
+	err error
+)
+
+func init() {
+	S3, err = NewS3Client()
+	if err != nil {
+		log.Error(log.LogInfo{
+			"error": err.Error(),
+		}, "[S3] Failed to initialize S3 client")
 	}
 }
 
@@ -79,8 +125,11 @@ func (s *S3Struct) Upload(file *multipart.FileHeader) (string, error) {
 		contentType = "application/octet-stream" // Fallback for unknown file types
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	// Upload to S3
-	result, err := s.uploader.Upload(&s3manager.UploadInput{
+	result, err := s.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Bucket:      aws.String(env.AppEnv.AWSS3BucketName),
 		Key:         aws.String(fileName),
 		Body:        fileContent,
@@ -89,11 +138,11 @@ func (s *S3Struct) Upload(file *multipart.FileHeader) (string, error) {
 	})
 	if err != nil {
 		log.Error(log.LogInfo{
-			"error": err.Error(),
+			"error":    err.Error(),
+			"fileName": fileName,
 		}, "[S3][Upload] failed to upload file")
 		return "", err
 	}
 
-	// Return public URL
 	return result.Location, nil
 }
