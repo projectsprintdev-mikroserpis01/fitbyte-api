@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain/dto"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain/entity"
 )
@@ -11,8 +12,9 @@ import (
 type ActivityRepository interface {
 	CreateActivity(ctx context.Context, activity entity.Activity) error
 	GetActivity(ctx context.Context, activityType int16, doneAtFrom, doneAtTo time.Time, caloriesBurnedMin, caloriesBurnedMax, limit, offset int) ([]entity.Activity, error)
+	GetActivityByID(ctx context.Context, activityID uuid.UUID) (entity.Activity, error)
 	UpdateActivity(ctx context.Context, activity entity.Activity) error
-	DeleteActivity(ctx context.Context, activityID string) error
+	DeleteActivity(ctx context.Context, activityID uuid.UUID) error
 }
 
 type ActivityService interface {
