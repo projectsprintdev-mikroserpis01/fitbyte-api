@@ -8,6 +8,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain"
+	activityCtr "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/activity/controller"
+	activityRepo "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/activity/repository"
+	activitySvc "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/activity/service"
 	authCtr "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/auth/controller"
 	authRepo "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/auth/repository"
 	authSvc "github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/app/auth/service"
@@ -23,6 +26,7 @@ import (
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/log"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/s3"
 	timePkg "github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/time"
+	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/uuid"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/validator"
 )
 
@@ -88,6 +92,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB) {
 	_ = timePkg.Time
 	validator := validator.Validator
 	jwt := jwt.Jwt
+	uuid := uuid.UUID
 	middleware := middlewares.NewMiddleware(jwt)
 	s3Client, err := s3.NewS3Client()
 	if err != nil {
@@ -109,14 +114,17 @@ func (s *httpServer) MountRoutes(db *sqlx.DB) {
 	// Initialize repositories
 	userRepo := userRepo.NewUserRepository(db)
 	authRepository := authRepo.NewAuthRepository(db)
+	activityRepository := activityRepo.NewActivityRepository(db)
 
 	// Initialize services
 	userService := userSvc.NewUserService(userRepo, jwt, bcrypt, validator)
 	authService := authSvc.NewAuthService(authRepository, validator, jwt, bcrypt)
+	activityService := activitySvc.NewActivityService(activityRepository, validator, uuid)
 
 	// Initialize controllers
 	userCtr.InitUserController(s.app, userService)
 	authCtr.InitAuthController(s.app, authService)
+	activityCtr.InitActivityController(api, activityService, middleware)
 
 	s.app.Post("/v1/file", middleware.RequireAuth(), func(c *fiber.Ctx) error {
 		file, err := c.FormFile("file")
