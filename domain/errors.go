@@ -97,3 +97,13 @@ var ErrInvalidMimeType = &RequestError{
 	StatusCode: http.StatusBadRequest,
 	Err:        errors.New("invalid mime type"),
 }
+
+var ErrEntityNotFound = &RequestError{
+	StatusCode: http.StatusNotFound,
+	Err:        errors.New("entity not found"),
+}
+
+var ErrMultipleEntities = &RequestError{
+	StatusCode: http.StatusInternalServerError,
+	Err:        errors.New("multiple entities found"),
+}
