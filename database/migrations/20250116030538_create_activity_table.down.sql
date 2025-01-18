@@ -1,3 +1,1 @@
-DROP CONSTRAINT IF EXISTS fk_user_id;
-
-DROP TABLE IF EXISTS activity;
+DROP TABLE IF EXISTS activities;
