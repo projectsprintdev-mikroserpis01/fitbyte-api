@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	maxFileSize    = 100 * 1024      // 100 KiB
 	uploadPartSize = 5 * 1024 * 1024 // 5MB (S3 minimum part size)
 )
 
