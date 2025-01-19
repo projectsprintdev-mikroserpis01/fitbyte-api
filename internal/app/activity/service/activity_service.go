@@ -135,7 +135,7 @@ func (a *activityStruct) UpdateActivity(ctx context.Context, req dto.UpdateActiv
 		activity.ActivityType = enums.ActivityTypesReverse[*req.ActivityType]
 	}
 
-	if !req.DoneAt.IsZero() && *req.DoneAt != activity.DoneAt {
+	if !req.DoneAt.IsZero() && !(*req.DoneAt).Truncate(time.Millisecond).Equal(activity.DoneAt.Truncate(time.Millisecond)) {
 		activity.DoneAt = *req.DoneAt
 	}
 
