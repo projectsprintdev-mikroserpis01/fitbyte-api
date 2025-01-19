@@ -2,13 +2,10 @@ package service
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain/contracts"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/domain/dto"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/bcrypt"
@@ -59,56 +56,18 @@ func (s *userService) UpdateUserById(ctx context.Context, id int, req dto.Update
 		return nil, valErr
 	}
 
-	if req.Email != nil {
-		user, err := s.repo.GetUserByEmail(ctx, *req.Email)
-		if err == nil { // found a user with the same email
-			if user.ID != id {
-				log.Info(log.LogInfo{
-					"user id": user.ID,
-					"id":      id,
-				}, "[userService.UpdateUserById] id")
-
-				return nil, domain.ErrUserEmailAlreadyExists
-			}
-		}
-
-		if err != nil && !errors.Is(err, sql.ErrNoRows) { // some other error occurred
-			return nil, err
-		}
-	}
-
 	log.Info(log.LogInfo{
-		"is req user image uri nil": req.UserImageUri == nil,
+		"is req user image uri nil": req.ImageURI == nil,
 	}, "[userService.UpdateUserById] id")
 
-	if req.UserImageUri != nil {
-		u, err := url.ParseRequestURI(*req.UserImageUri)
+	if req.ImageURI != nil {
+		u, err := url.ParseRequestURI(*req.ImageURI)
 		if err != nil {
 			return nil, fiber.NewError(fiber.StatusBadRequest, "invalid user image uri")
 		}
 
 		if u.Scheme == "" || u.Host == "" {
 			return nil, fiber.NewError(fiber.StatusBadRequest, "invalid user image uri")
-		}
-
-		// Additional validation: Check if the host contains a domain or is not empty
-		if !strings.Contains(u.Host, ".") {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "invalid company image uri")
-		}
-	}
-
-	if req.CompanyImageUri != nil {
-		u, err := url.ParseRequestURI(*req.CompanyImageUri)
-		if err != nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "invalid company image uri")
-		}
-
-		log.Info(log.LogInfo{
-			"url": u,
-		}, "[userService.UpdateUserById] company image uri")
-
-		if u.Scheme == "" || u.Host == "" {
-			return nil, fiber.NewError(fiber.StatusBadRequest, "invalid company image uri")
 		}
 
 		// Additional validation: Check if the host contains a domain or is not empty
@@ -119,26 +78,30 @@ func (s *userService) UpdateUserById(ctx context.Context, id int, req dto.Update
 
 	fields := []string{}
 	args := []interface{}{}
-	if req.Email != nil {
-		fields = append(fields, "email")
-		args = append(args, *req.Email)
-	}
+
 	if req.Name != nil {
 		fields = append(fields, "name")
 		args = append(args, *req.Name)
 	}
-	if req.UserImageUri != nil {
-		fields = append(fields, "user_image_uri")
-		args = append(args, *req.UserImageUri)
+	if req.ImageURI != nil {
+		fields = append(fields, "image_uri")
+		args = append(args, *req.ImageURI)
 	}
-	if req.CompanyName != nil {
-		fields = append(fields, "company_name")
-		args = append(args, *req.CompanyName)
-	}
-	if req.CompanyImageUri != nil {
-		fields = append(fields, "company_image_uri")
-		args = append(args, *req.CompanyImageUri)
-	}
+
+	fields = append(fields, "preference")
+	args = append(args, req.Preference)
+
+	fields = append(fields, "weight_unit")
+	args = append(args, req.WeightUnit)
+
+	fields = append(fields, "height_unit")
+	args = append(args, req.HeightUnit)
+
+	fields = append(fields, "height")
+	args = append(args, req.Height)
+
+	fields = append(fields, "weight")
+	args = append(args, req.Weight)
 
 	_, err := s.repo.UpdateUserByIDSomeFields(ctx, id, fields, args)
 	if err != nil {
