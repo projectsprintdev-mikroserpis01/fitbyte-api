@@ -53,7 +53,7 @@ type UpdateActivityRequest struct {
 type UpdateActivityResponse struct {
 	ActivityID        uuid.UUID `json:"activityId"`
 	AcitivityType     string    `json:"activityType"`
-	DoneAt            time.Time `json:"doneAt"`
+	DoneAt            string    `json:"doneAt"`
 	DurationInMinutes int       `json:"durationInMinutes"`
 	CaloriesBurned    int       `json:"caloriesBurned"`
 	CreatedAt         time.Time `json:"createdAt"`

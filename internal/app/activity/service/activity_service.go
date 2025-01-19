@@ -60,7 +60,6 @@ func (a *activityStruct) CreateActivity(ctx context.Context, req dto.CreateActiv
 	if err != nil {
 		return dto.CreateActivityResponse{}, err
 	}
-
 	res := dto.CreateActivityResponse{
 		ActivityID:        activity.ID,
 		AcitivityType:     req.ActivityType,
@@ -135,7 +134,7 @@ func (a *activityStruct) UpdateActivity(ctx context.Context, req dto.UpdateActiv
 		activity.ActivityType = enums.ActivityTypesReverse[*req.ActivityType]
 	}
 
-	if !req.DoneAt.IsZero() && !(*req.DoneAt).Truncate(time.Millisecond).Equal(activity.DoneAt.Truncate(time.Millisecond)) {
+	if !req.DoneAt.IsZero() && !(*req.DoneAt).Equal(activity.DoneAt) {
 		activity.DoneAt = *req.DoneAt
 	}
 
@@ -151,10 +150,11 @@ func (a *activityStruct) UpdateActivity(ctx context.Context, req dto.UpdateActiv
 		return dto.UpdateActivityResponse{}, err
 	}
 
+	doneAt := activity.DoneAt.UTC().Format("2006-01-02T15:04:05.000Z")
 	res := dto.UpdateActivityResponse{
 		ActivityID:        activity.ID,
 		AcitivityType:     enums.ActivityTypes[activity.ActivityType],
-		DoneAt:            activity.DoneAt,
+		DoneAt:            doneAt,
 		DurationInMinutes: activity.DurationInMinutes,
 		CaloriesBurned:    activity.CaloriesBurned,
 		CreatedAt:         activity.CreatedAt,
