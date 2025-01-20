@@ -4,7 +4,7 @@ version: "3"
 
 vars:
   DBML_FILE: "./docs/schema.dbml"
-  DSN: "postgres://{{.DB_USER}}:{{.DB_PASS}}@{{.DB_HOST}}:{{.DB_PORT}}/{{.DB_NAME}}?sslmode=disable"
+  DSN: "postgres://{{.DB_USER}}:{{.DB_PASS}}@{{.DB_HOST}}:{{.DB_PORT}}/{{.DB_NAME}}"
 
 dotenv:
   - "./config/.env"
@@ -93,7 +93,7 @@ tasks:
   dev:
     desc: "Start development server"
     cmds:
-      - go run cmd/app/main.go
+      - air
 
   lint:
     desc: "Run linter"

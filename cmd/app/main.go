@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/infra/database"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/infra/env"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/internal/infra/server"
