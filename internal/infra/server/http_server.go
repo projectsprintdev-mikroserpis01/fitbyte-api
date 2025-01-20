@@ -1,10 +1,11 @@
 package server
 
 import (
-	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
@@ -36,7 +37,7 @@ import (
 )
 
 type HttpServer interface {
-	Start(part string)
+	Start(port string)
 	MountMiddlewares()
 	MountRoutes(db *sqlx.DB)
 	GetApp() *fiber.App
@@ -45,6 +46,13 @@ type HttpServer interface {
 type httpServer struct {
 	app *fiber.App
 }
+
+var (
+	registerOnce     sync.Once
+	metricsOnce      sync.Once
+	goCollector      = prometheus.NewGoCollector()
+	processCollector = prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{})
+)
 
 func NewHttpServer() HttpServer {
 	config := fiber.Config{
@@ -92,7 +100,12 @@ func (s *httpServer) MountMiddlewares() {
 	s.app.Use(middlewares.RecoverConfig())
 }
 
-var registerOnce sync.Once
+func registerPrometheusMetrics() {
+	metricsOnce.Do(func() {
+		prometheus.MustRegister(goCollector)
+		prometheus.MustRegister(processCollector)
+	})
+}
 
 func prometheusHandler() fiber.Handler {
 	h := promhttp.Handler()
@@ -120,10 +133,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB) {
 		return response.SendResponse(c, fiber.StatusOK, "fitbyte API")
 	})
 
-	registerOnce.Do(func() {
-		prometheus.MustRegister(prometheus.NewGoCollector())
-		prometheus.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
-	})
+	registerPrometheusMetrics()
 
 	s.app.Get("/health", prometheusHandler())
 	api := s.app.Group("/v1")
