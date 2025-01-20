@@ -48,6 +48,12 @@ The application is built on [Go v1.23.4](https://tip.golang.org/doc/go1.22) and 
    task service:down
    ```
 
+3. To build the Docker containers:
+
+   ```sh
+   task service:build
+   ```
+
 ## Checking Database Connection
 
 To check the database connection, use the following command:
@@ -78,4 +84,66 @@ task service:db:connect
 
    ```sh
    BASE_URL=http://localhost:8080 k6 run load_test.js
+   ```
+
+
+## Installing to Production
+
+Before that, run VPN first:
+```
+sudo openvpn --config /path/to/your/config.ovpn
+```
+Replace `/path/to/your/config.ovpn` with the path to the `.ovpn` configuration file you received.
+
+1. **Update Go modules**:
+
+   Before building the production binary, make sure to update the Go modules by running:
+   ```bash
+   task
+   ```
+
+2. **Build the application for production**:
+
+   Run the following command to build the production binary:
+   ```bash
+   task build
+   ```
+
+3. **Upload the binary to your EC2 instance using SCP**:
+
+   Upload the built binary to your EC2 instance:
+   ```bash
+   scp -i /path/to/your-key.pem mybinary ubuntu@<EC2_PUBLIC_IP>:/home/ubuntu/
+   ```
+
+   Replace `/path/to/your-key.pem` with the path to your private key, `mybinary` with the name of your binary, and `<EC2_PUBLIC_IP>` with the public IP of your EC2 instance.
+
+4. **Upload the config/.env to your EC2 instance using SCP**:
+
+   Upload the `.env` configuration file (along with the `config/` directory) to your EC2 instance:
+   ```bash
+   scp -i /path/to/your-key.pem -r config ubuntu@<EC2_PUBLIC_IP>:/home/ubuntu/
+   ```
+
+   Replace `/path/to/your-key.pem` with the path to your private key and `<EC2_PUBLIC_IP>` with the public IP of your EC2 instance.
+
+5. **Login to your EC2 instance**:
+
+   SSH into your EC2 instance:
+   ```bash
+   ssh -i /path/to/your-key.pem ubuntu@<EC2_PUBLIC_IP>
+   ```
+
+6. **Make the binary executable**:
+
+   If the binary isn't executable, run the following command to make it executable:
+   ```bash
+   chmod +x /home/ubuntu/mybinary
+   ```
+
+7. **Run the binary**:
+
+   Run the binary to start the application:
+   ```bash
+   ./mybinary
    ```
