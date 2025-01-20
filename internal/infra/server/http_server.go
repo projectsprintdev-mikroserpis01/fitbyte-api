@@ -1,8 +1,10 @@
 package server
 
 import (
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
@@ -28,6 +30,9 @@ import (
 	timePkg "github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/time"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/uuid"
 	"github.com/projectsprintdev-mikroserpis01/fitbyte-api/pkg/validator"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type HttpServer interface {
@@ -87,6 +92,16 @@ func (s *httpServer) MountMiddlewares() {
 	s.app.Use(middlewares.RecoverConfig())
 }
 
+var registerOnce sync.Once
+
+func prometheusHandler() fiber.Handler {
+	h := promhttp.Handler()
+	return func(c *fiber.Ctx) error {
+		fasthttpadaptor.NewFastHTTPHandler(h)(c.Context())
+		return nil
+	}
+}
+
 func (s *httpServer) MountRoutes(db *sqlx.DB) {
 	bcrypt := bcrypt.Bcrypt
 	_ = timePkg.Time
@@ -105,6 +120,12 @@ func (s *httpServer) MountRoutes(db *sqlx.DB) {
 		return response.SendResponse(c, fiber.StatusOK, "fitbyte API")
 	})
 
+	registerOnce.Do(func() {
+		prometheus.MustRegister(prometheus.NewGoCollector())
+		prometheus.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	})
+
+	s.app.Get("/health", prometheusHandler())
 	api := s.app.Group("/v1")
 
 	api.Get("/", func(c *fiber.Ctx) error {
