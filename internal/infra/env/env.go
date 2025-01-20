@@ -22,6 +22,7 @@ type Env struct {
 	AWSSecretAccessKey string        `mapstructure:"AWS_SECRET_ACCESS_KEY"`
 	AWSS3BucketName    string        `mapstructure:"AWS_S3_BUCKET_NAME"`
 	AWSRegion          string        `mapstructure:"AWS_REGION"`
+	AWSS3Path          string        `mapstructure:"AWS_S3_PATH"`
 }
 
 var AppEnv = getEnv()

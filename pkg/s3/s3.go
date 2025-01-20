@@ -106,13 +106,6 @@ func (s *S3Struct) Upload(file *multipart.FileHeader) (string, error) {
 		}, "[S3][Upload] failed to open file")
 		return "", err
 	}
-	defer func() {
-		if cerr := fileContent.Close(); cerr != nil {
-			log.Warn(log.LogInfo{
-				"error": cerr.Error(),
-			}, "[S3][Upload] failed to close file")
-		}
-	}()
 
 	// Generate unique file name
 	timeNow := time.Now().Unix()
@@ -124,24 +117,38 @@ func (s *S3Struct) Upload(file *multipart.FileHeader) (string, error) {
 		contentType = "application/octet-stream" // Fallback for unknown file types
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	// Start Go routine to upload file
+	go func() {
+		defer func() {
+			if cerr := fileContent.Close(); cerr != nil {
+				log.Warn(log.LogInfo{
+					"error": cerr.Error(),
+				}, "[S3][Upload] failed to close file")
+			}
+		}()
 
-	// Upload to S3
-	result, err := s.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
-		Bucket:      aws.String(env.AppEnv.AWSS3BucketName),
-		Key:         aws.String(fileName),
-		Body:        fileContent,
-		ACL:         aws.String("public-read"),
-		ContentType: aws.String(contentType),
-	})
-	if err != nil {
-		log.Error(log.LogInfo{
-			"error":    err.Error(),
-			"fileName": fileName,
-		}, "[S3][Upload] failed to upload file")
-		return "", err
-	}
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 
-	return result.Location, nil
+		_, err := s.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
+			Bucket:      aws.String(env.AppEnv.AWSS3BucketName),
+			Key:         aws.String(fileName),
+			Body:        fileContent,
+			ACL:         aws.String("public-read"),
+			ContentType: aws.String(contentType),
+		})
+		if err != nil {
+			log.Error(log.LogInfo{
+				"error":    err.Error(),
+				"fileName": fileName,
+			}, "[S3][Upload] failed to upload file")
+		} else {
+			log.Info(log.LogInfo{
+				"fileName": fileName,
+			}, "[S3][Upload] file uploaded successfully")
+		}
+	}()
+
+	// Return the file name immediately
+	return fmt.Sprintf("%s%s", env.AppEnv.AWSS3Path, fileName), nil
 }

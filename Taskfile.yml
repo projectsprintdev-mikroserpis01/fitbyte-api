@@ -92,7 +92,7 @@ tasks:
   dev:
     desc: "Start development server"
     cmds:
-      - air
+      - go run cmd/app/main.go
 
   lint:
     desc: "Run linter"
