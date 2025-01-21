@@ -35,6 +35,10 @@ tasks:
     desc: "Start services"
     cmd: docker compose --env-file ./config/.env up -d
 
+  service:up:build:
+    desc: "Start services"
+    cmd: docker compose --env-file ./config/.env up --build -d
+
   service:down:
     desc: "Stop services"
     cmd: docker compose down
@@ -53,6 +57,20 @@ tasks:
     requires:
       vars:
         - DB_USER
+        - DB_NAME
+
+  db:connect:
+    desc: "Connect to the remote database"
+    cmds:
+      - psql -h {{.DB_HOST}} -p {{.DB_PORT}} -U {{.DB_USER}} -d {{.DB_NAME}}
+    env:
+      PGPASSWORD: "{{.DB_PASS}}"
+    requires:
+      vars:
+        - DB_HOST
+        - DB_PORT
+        - DB_USER
+        - DB_PASS
         - DB_NAME
 
   db:seed:

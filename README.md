@@ -147,3 +147,42 @@ Replace `/path/to/your/config.ovpn` with the path to the `.ovpn` configuration f
    ```bash
    ./mybinary
    ```
+
+### **Connecting to Remote Database and Running Migrations**
+
+1. **Update Your `.env` File**:  
+   Ensure your `.env` file contains the correct production database credentials. Update the following values in `config/.env`:
+   ```env
+   DB_HOST=<PRODUCTION_DB_HOST>
+   DB_PORT=<PRODUCTION_DB_PORT>
+   DB_USER=<PRODUCTION_DB_USER>
+   DB_PASS=<PRODUCTION_DB_PASSWORD>
+   DB_NAME=<PRODUCTION_DB_NAME>
+   ```
+
+2. **Connect to the Production Database**:  
+   To connect to the production database, use the following task:
+   ```bash
+   task db:connect
+   ```
+
+   This command will prompt you to log in to the production database.
+
+3. **Run Migrations**:  
+   Apply migrations to the production database:
+   ```bash
+   task migrate:up
+   ```
+
+   This uses the production database credentials specified in your `.env` file.
+
+4. **Rollback Migrations (Optional)**:  
+   To roll back a migration in the production database, use:
+   ```bash
+   task migrate:down
+   ```
+
+   Or force a specific migration version:
+   ```bash
+   task migrate:force CLI_ARGS=<VERSION>
+   ```
